@@ -42,6 +42,15 @@ ISR(TIMER0_COMPA_vect){
 
 }
 
+void scale_array(uint8_t *input_array, float *output_array, uint8_t size, 
+                 uint8_t min_in, uint8_t max_in, float min_out, float max_out) {
+    for (uint8_t i = 0; i < size; i++) {
+        output_array[i] = ((float)(input_array[i] - min_in) * (max_out - min_out) / 
+                           (float)(max_in - min_in)) + min_out;
+    }
+}
+
+
 
 ISR(ADC_vect) {
     static int adc_index = 0; 
@@ -83,28 +92,73 @@ void uint8_to_string(uint8_t value, char *str) {
     str[j] = '\0';  // Null-terminate the string
 }
 
+void float_to_string(float value, char *str, uint8_t precision) {
+    // Extract integer part
+    int int_part = (int)value;
+
+    // Extract fractional part
+    float fractional_part = value - int_part;
+
+    // Convert integer part to string
+    char temp[12];  // Temporary buffer for the integer part
+    int i = 0;
+    do {
+        temp[i++] = (int_part % 10) + '0';
+        int_part /= 10;
+    } while (int_part > 0);
+
+    // Reverse the integer part into the output string
+    while (i > 0) {
+        *str++ = temp[--i];
+    }
+
+    // Add decimal point
+    if (precision > 0) {
+        *str++ = '.';
+    }
+
+    // Convert fractional part to string
+    for (uint8_t p = 0; p < precision; p++) {
+        fractional_part *= 10;
+        int digit = (int)fractional_part;
+        *str++ = digit + '0';
+        fractional_part -= digit;
+    }
+
+    // Null-terminate the string
+    *str = '\0';
+}
+
+
 int main(){
      DDRB|= (1<<PB5);
     initTimer(124);
     setup_pwm_2khz();
-    initADC(0);
+    initADC(1);
     _i2c_address = 0X78; // write address for i2c interface
 	I2C_Init();  //initialize i2c interface to display
 	InitializeDisplay(); //initialize  display
 	//print_fonts();  //for test and then exclude the  clear_display(); call
 	clear_display();   //use this before writing you own text
     sei();
-    
+    char buffer[10];  // Buffer to store ADC value as a string
     char test[] = "test";
-    ADCSRA |= (1 << ADSC);  // Start conversion
+    float scaled_values[N];     // Array to store scaled voltages
+    
 
  while (1) {
-        if(buffer_full==true){
+        if(buffer_full==true)
+        {
             PORTB ^= (1<<PB5);
-        sendStrXY(test,0,0);
-        // Delay for 1000ms
-        _delay_ms(1000);  // Adjust delay as needed
-        buffer_full = false;
+            scale_array(adc_samples, scaled_values, N, 0, 255, 0.0, 5.0);
+            float_to_string(scaled_values[6], buffer, 2);
+            //clear_display();
+            sendStrXY(buffer, 0, 0);
+            // Delay for 1000ms 
+            
+            //_delay_ms(10);  // Adjust delay as needed
+            buffer_full = false;
+            ADCSRA |= (1 << ADSC);  // Restart ADC conversion
         }
     }
 }
