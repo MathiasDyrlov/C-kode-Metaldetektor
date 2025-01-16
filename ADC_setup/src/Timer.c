@@ -16,11 +16,20 @@ void initTimer(unsigned int compareValue) {
     
 }
 
- void init_timer0(unsigned int compareValue){
-	 TCCR0B |= (1<<CS01); //Pre-scaling 8
-	 TCCR0A |= (1<<WGM01); //CTC mode top value = OCR0A
-	 OCR0A = compareValue; //compare match use 124 as a parameter if max frequency is 8kHz and 16MHz internal clock.
-	 TIMSK0 |=(1<<OCIE0A); //Interrupt when TCNT0 = OCR0A value
-	 TCNT0 = 0; // Reset the counter to ensure rising edge alignment
- }
+void setup_pwm_2khz() {
+    // Set pin OC1A (PB1) as output
+    DDRB |= (1 << PB1);  // Set PB1 (pin 9 on Arduino) as output
+
+    // Configure Timer1 for Fast PWM mode
+    TCCR1A = (1 << COM1A1) | (1 << WGM11);  // Non-inverting mode, WGM bits for Fast PWM
+    TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11);  // WGM bits, Prescaler = 8
+
+    // Set TOP value for 2 kHz PWM frequency
+    ICR1 = 999;
+
+    // Set initial duty cycle to 50%
+    OCR1A = 499;  // 50% duty cycle
+
+    TIMSK1 |= (1 << OCIE1A);  // Enable interrupt on OCR1A compare match
+}
  

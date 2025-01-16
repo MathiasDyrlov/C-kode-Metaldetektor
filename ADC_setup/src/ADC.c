@@ -19,8 +19,11 @@ void initADC(uint8_t channel) {
     // Set the reference voltage to AVCC (5V)
     ADMUX = (ADMUX & ~(1 << REFS1)) | (1 << REFS0);
 
-    // Set ADC prescaler to 128 for 125 kHz ADC clock (16 MHz / 128)
-    ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+    ADMUX |= (1<<ADLAR);
+
+    // Set ADC prescaler to 128 for 250 kHz ADC clock (16 MHz / 64)
+    ADCSRA |= (1 << ADPS2) | (1 << ADPS1);
+    ADCSRA &= ~(1 << ADPS0);
 
     // Enable ADC, Auto Triggering, and ADC Interrupt
     ADCSRA |= (1 << ADEN) | (1 << ADATE) | (1 << ADIE);

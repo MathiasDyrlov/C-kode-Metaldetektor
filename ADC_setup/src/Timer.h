@@ -8,4 +8,5 @@ Uses: .h file for Timer1.c, include in main.c
  #ifndef TIMER_H_
  #define TIMER_H_
  void initTimer(unsigned int compareValue);
+ void setup_pwm_2khz();
  #endif /* TIMER_H_ */
