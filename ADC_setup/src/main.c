@@ -4,13 +4,15 @@
 #include "ADC.h"
 #include "Timer.h"
 #include <math.h>
-#include "I2C.h"  //include library for i2c driver
+#include "I2C.h"  //include library for i2c driver. Created 
 #include "ssd1306.h" //include display driver
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#define N 64  // Size of the array
+#define N 64  // Size of the ADC window. IE number of tabs
+
+//volatile variables to be processed 
 volatile bool buffer_full = false;
 volatile bool do_sample = false;
 volatile bool button_pressed = false;
@@ -21,37 +23,41 @@ volatile bool first_press = false;
 uint8_t adc_samples[N];  // Array to store ADC samples
 
 
-void initButton(){
-	EICRA |= (1 << ISC11);
-    EICRA &= ~(1 << ISC10); //Generates interrupt on falling edge on INT1
+void initButton() {
+    // Configure INT1 to trigger on a falling edge
+    EICRA |= (1 << ISC11);    // Falling edge on INT1
+    EICRA &= ~(1 << ISC10);
 
-	EIMSK |=(1<<INT1);
-	PORTD|= (1<<PD3); //w
-	
+    // Enable external interrupt for INT1
+    EIMSK |= (1 << INT1);
+
+    // Enable pull-up resistor on PD3 (INT1)
+    PORTD |= (1 << PD3);
+
+    // Optional: Configure PD3 as input (default is input after reset)
+    DDRD &= ~(1 << PD3);
 }
 
 
 
 ISR(INT1_vect){
-    first_press = true;
-    button_pressed = true;
+   
+    button_pressed = true; // interrupt to be processed in main scope
 }
 
 ISR(TIMER1_COMPA_vect) {
     
-TCNT0 = 0;
+TCNT0 = 0; // Reset Timer0 counter, ensuring phase allignment with pwm output 
     if (buffer_full==false)
     {
-        do_sample = true;
-        //TCNT0 = 0;
+        do_sample = true; //This ensures that a new adc ample window starts at the same point every time
         
-    }
+        
+    } 
+
     
 
-
-    // Reset Timer0 counter, should be running simultanously, this is a safeguard
-    //TCNT0 = OCR0A;
-    //this should be set to OCR0A if the PA-step flips the output signal.
+ 
 
    
 }
@@ -189,7 +195,7 @@ int main(){
     float phase_calibrate = 0.0;       // To store the calculated phase (for DFT approximation)
 
     //test cases
-    //uint8_t test_values[N] = {42, 183, 91, 7, 154, 33, 212, 5, 98, 17, 57, 103, 206, 239, 71, 29, 158, 46, 201, 114, 34, 77, 185, 220, 14, 88, 129, 160, 250, 9, 35, 142};
+   // uint8_t test_values[N] = {42, 183, 91, 7, 154, 33, 212, 5, 98, 17, 57, 103, 206, 239, 71, 29, 158, 46, 201, 114, 34, 77, 185, 220, 14, 88, 129, 160, 250, 9, 35, 142};
 
     sendStrXY("Press button to calibrate",0,0);
 
@@ -202,6 +208,7 @@ int main(){
         amplitude_calibrate=amplitude1;
         phase_calibrate=phase1;
         _delay_ms(60); //temporary debounce
+        first_press = true;
         button_pressed = false;
         
     }
@@ -222,7 +229,7 @@ int main(){
             // Display phase in degrees
             phase1=phase1-phase_calibrate;
             float_to_string(phase1 * 180 / M_PI, buffer_phase, 2);  // Convert radians to degrees
-            if (first_press==true)
+            if (1)//first_press==true)
             {
             
             sendStrXY("Amp:", 3, 0);
@@ -234,7 +241,7 @@ int main(){
 
             buffer_full = false;        // should theoretically go and into the timer
 
-            //ADCSRA |= (1 << ADSC);      // Restart ADC conversion (done i isr for timer0)
+           
         }
     }
 }
